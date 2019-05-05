@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import qs from 'qs';
+import Cookies from 'universal-cookie';
+
+const cookies = new Cookies();
 
 class Auth extends Component {
     constructor(props) {
@@ -14,6 +17,7 @@ class Auth extends Component {
         // register form binds
         this.handleRegisterUsername = this.handleRegisterUsername.bind(this);
         this.handleRegisterPassword = this.handleRegisterPassword.bind(this);
+        this.handleRegisterPassword2 = this.handleRegisterPassword2.bind(this);
         this.handleRegisterEmail = this.handleRegisterEmail.bind(this);
         this.handleRegisterSubmit = this.handleRegisterSubmit.bind(this);
 
@@ -21,7 +25,10 @@ class Auth extends Component {
             loginUsername: '',
             loginPassword: '',
             registerUsername: '',
-            registerPassword: ''
+            registerPassword: '',
+            registerPassword2: '',
+            registerEmail: '',
+            accessToken: ''
         };
     };
 
@@ -66,6 +73,11 @@ class Auth extends Component {
                         </label>
 
                         <label>
+                            Enter password again:
+                            <input type="password" name="password2" onChange={this.handleRegisterPassword2} value={this.state.registerPassword2} />
+                        </label>
+
+                        <label>
                             Email:
                             <input type="text" name="email" onChange={this.handleRegisterEmail} value={this.state.registerEmail} />
                         </label>
@@ -81,7 +93,8 @@ class Auth extends Component {
     BASE_URL = 'http://localhost:8080/';
 
     HEADERS = {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'access-token': ''
     };
 
     /** handle username change in login form */
@@ -105,7 +118,22 @@ class Auth extends Component {
 
         axios.post(this.BASE_URL + 'users/login', user, this.HEADERS).then( (result) => {
             // debugging
-            console.log(result);
+            console.log(result.data);
+
+            if (result.data.token != null) {
+                // set token and userId as cookies for later use
+                const cookiesOptions = {
+                    path: '/',
+                    maxAge: result.data.tokenMaxAge
+                };
+
+                cookies.set('token', result.data.token, cookiesOptions);
+                cookies.set('userId', result.data.userId, cookiesOptions);
+                
+            } else {
+                // TODO: make unsuccessfull authentication logic
+                console.log('eipä ollu');
+            }
         }).catch( (err) => {
             console.log('Error: ' + err);
         });
@@ -121,6 +149,11 @@ class Auth extends Component {
         this.setState({registerPassword: e.target.value});
     };
 
+    /** handle password2 change in register form */
+    handleRegisterPassword2(e) {
+        this.setState({registerPassword2: e.target.value});
+    };
+
     /** handle email change in register form */
     handleRegisterEmail(e) {
         this.setState({registerEmail: e.target.value});
@@ -134,12 +167,30 @@ class Auth extends Component {
         const newUser = qs.stringify({
             username: this.state.registerUsername,
             password: this.state.registerPassword,
+            password2: this.state.registerPassword2,
             email: this.state.registerEmail
         });
 
         axios.post(this.BASE_URL + 'users/register', newUser, this.HEADERS).then( (result) => {
             // debugging
-            console.log(result);
+            console.log(result.data);
+
+            if (result.data.token != null) {
+                // set token and userId as cookies for later use
+                const cookiesOptions = {
+                    path: '/',
+                    maxAge: result.data.tokenMaxAge
+                };
+                
+                cookies.set('token', result.data.token, cookiesOptions);
+                cookies.set('userId', result.data.userId, cookiesOptions);
+                
+            } else {
+                // TODO: make unsuccessfull registration logic
+                console.log('eipä ollu');
+            }
+        }).catch( (err) => {
+            console.log('Error: ' + err);
         });
     };
 };
