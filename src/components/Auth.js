@@ -1,9 +1,14 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import qs from 'qs';
-import Cookies from 'universal-cookie';
+import CookieService from '../services/CookieService';
+import AuthService from '../services/AuthService';
 
-const cookies = new Cookies();
+// auth service confid
+const auth = new AuthService();
+
+// cookies service config
+const cookies = new CookieService();
 
 class Auth extends Component {
     constructor(props) {
@@ -28,8 +33,25 @@ class Auth extends Component {
             registerPassword: '',
             registerPassword2: '',
             registerEmail: '',
-            accessToken: ''
+            accessToken: ''            
         };
+    };
+
+    componentDidMount() {
+        auth.isLoggedIn().then( (result) => {
+            if(result.data.isTokenValid) {
+                this.props.history.push('/recipes');
+            }
+        });
+    };
+
+    /** axios constants */
+    BASE_URL = 'https://env-9926568.jelastic.metropolia.fi/';
+
+    HEADERS = {
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        }
     };
 
     render() {
@@ -89,14 +111,6 @@ class Auth extends Component {
         );
     };
 
-    /** axios constants */
-    BASE_URL = 'http://localhost:8080/';
-
-    HEADERS = {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        'access-token': ''
-    };
-
     /** handle username change in login form */
     handleLoginUsername(e) {
         this.setState({loginUsername: e.target.value});
@@ -117,22 +131,14 @@ class Auth extends Component {
         });
 
         axios.post(this.BASE_URL + 'users/login', user, this.HEADERS).then( (result) => {
-            // debugging
-            console.log(result.data);
-
             if (result.data.token != null) {
-                // set token and userId as cookies for later use
-                const cookiesOptions = {
-                    path: '/',
-                    maxAge: result.data.tokenMaxAge
-                };
+                // if token is sent set token and userId as cookies for later use
+                cookies.setCookie('token', result.data.token, result.data.tokenMaxAge);
+                cookies.setCookie('userId', result.data.userId, result.data.tokenMaxAge);
 
-                cookies.set('token', result.data.token, cookiesOptions);
-                cookies.set('userId', result.data.userId, cookiesOptions);
-                
+                this.props.history.push('/recipes');
             } else {
-                // TODO: make unsuccessfull authentication logic
-                console.log('eipä ollu');
+                alert('Unsuccessfull authentication, please try again');
             }
         }).catch( (err) => {
             console.log('Error: ' + err);
@@ -162,36 +168,35 @@ class Auth extends Component {
     /** Handle register submit event */
     handleRegisterSubmit(event) {
         event.preventDefault();
-        
-        // send new user as a string since backend uses x-www-form-urlencoded
-        const newUser = qs.stringify({
-            username: this.state.registerUsername,
-            password: this.state.registerPassword,
-            password2: this.state.registerPassword2,
-            email: this.state.registerEmail
-        });
 
-        axios.post(this.BASE_URL + 'users/register', newUser, this.HEADERS).then( (result) => {
-            // debugging
-            console.log(result.data);
+        // if password is typed correctly twice continue, else inform user
+        if(this.state.registerPassword === this.state.registerPassword2) {
+            // send new user as a string since backend uses x-www-form-urlencoded
+            const newUser = qs.stringify({
+                username: this.state.registerUsername,
+                password: this.state.registerPassword,
+                password2: this.state.registerPassword2,
+                email: this.state.registerEmail
+            });
 
-            if (result.data.token != null) {
-                // set token and userId as cookies for later use
-                const cookiesOptions = {
-                    path: '/',
-                    maxAge: result.data.tokenMaxAge
-                };
-                
-                cookies.set('token', result.data.token, cookiesOptions);
-                cookies.set('userId', result.data.userId, cookiesOptions);
-                
-            } else {
-                // TODO: make unsuccessfull registration logic
-                console.log('eipä ollu');
-            }
-        }).catch( (err) => {
-            console.log('Error: ' + err);
-        });
+            axios.post(this.BASE_URL + 'users/register', newUser, this.HEADERS).then( (result) => {
+                if (result.data.token != null) {
+                    // if token is sent set token and userId as cookies for later use
+                    cookies.setCookie('token', result.data.token, result.data.tokenMaxAge);
+                    cookies.setCookie('userId', result.data.userId, result.data.tokenMaxAge);
+
+                    this.props.history.push('/recipes');
+                } else {
+                    // TODO: make unsuccessfull registration logic
+                    alert('There was error registering, please contact the web administrator :)');
+                }
+            }).catch( (err) => {
+                console.log('Error: ' + err);
+            });
+        } else {
+            // TODO: passwords dont match logic
+            alert('The passwords dont match');
+        }
     };
 };
 

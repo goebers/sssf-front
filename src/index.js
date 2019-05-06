@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Route, Link, BrowserRouter as Router } from 'react-router-dom';
+import { Route, HashRouter as Router } from 'react-router-dom';
 import './index.css';
-import Auth from './Auth';
-import Recipes from './Recipes';
+import Auth from './components/Auth';
+import Recipes from './components/Recipes';
 import * as serviceWorker from './serviceWorker';
 
 const routing = (
